@@ -20,6 +20,10 @@ cache:
 load_test:
   requests: 100
 
+# Fixed RNG seed → reproducible chaos runs (metrics.json matches the report exactly).
+# Set to null for nondeterministic runs.
+seed: 13
+
 # Chaos scenarios: each overrides provider fail_rate for targeted testing.
 # TODO(student): Add more scenarios or tweak these.
 scenarios:

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 10 — Reliability Engineering for Production Agents · Báo cáo</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2b3444;
+    --ink:#e6edf3; --muted:#9aa7b4; --accent:#4ea1ff; --accent2:#7ee787;
+    --warn:#f2cc60; --bad:#ff7b72; --good:#3fb950;
+    --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:16px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px 90px}
+  header.hero{
+    background:linear-gradient(135deg,#12233f 0%,#0d1117 60%);
+    border-bottom:1px solid var(--line);padding:52px 0 40px;margin-bottom:8px;
+  }
+  header.hero .wrap{padding-bottom:0}
+  .kicker{color:var(--accent);font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px}
+  h1{font-size:34px;line-height:1.2;margin:0 0 12px;font-weight:800;letter-spacing:-.5px}
+  .subtitle{color:var(--muted);font-size:18px;max-width:720px;margin:0}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .badge{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-family:var(--mono);color:var(--ink)}
+  .badge b{color:var(--accent2)}
+  section{margin-top:46px}
+  h2{font-size:24px;margin:0 0 6px;font-weight:750;display:flex;align-items:center;gap:12px}
+  h2 .num{font-family:var(--mono);font-size:15px;color:var(--accent);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 10px;flex:none}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--ink)}
+  .lead{color:var(--muted);margin:2px 0 18px;font-size:16px}
+  p{margin:12px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:16px 0}
+  .grid{display:grid;gap:14px}
+  .grid.c2{grid-template-columns:1fr 1fr}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+  .grid.c4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:760px){.grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}h1{font-size:27px}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .kpi .v{font-size:30px;font-weight:800;font-family:var(--mono);letter-spacing:-1px}
+  .kpi .v.good{color:var(--good)} .kpi .v.acc{color:var(--accent)}
+  .kpi .l{color:var(--muted);font-size:13px;margin-top:4px}
+  .kpi .sub{font-size:12px;color:var(--accent2);margin-top:6px;font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;background:var(--panel2)}
+  td.n,th.n{text-align:right;font-family:var(--mono)}
+  tr:last-child td{border-bottom:none}
+  table.z tbody tr:hover{background:var(--panel2)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 9px;border-radius:6px;font-weight:600}
+  .pill.pass{background:rgba(63,185,80,.16);color:var(--good);border:1px solid rgba(63,185,80,.35)}
+  .pill.warn{background:rgba(242,204,96,.14);color:var(--warn);border:1px solid rgba(242,204,96,.35)}
+  code,pre{font-family:var(--mono)}
+  pre{background:#0a0e14;border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.5;color:#c9d5e1}
+  pre .c{color:#6b7889}
+  .flow{background:#0a0e14;border:1px solid var(--line);border-radius:12px;padding:20px;font-family:var(--mono);font-size:13px;color:#c9d5e1;white-space:pre;overflow-x:auto;line-height:1.55}
+  ul.clean{list-style:none;padding-left:0;margin:10px 0}
+  ul.clean li{padding:8px 0 8px 28px;position:relative;border-bottom:1px solid var(--line)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li::before{content:"▸";position:absolute;left:6px;color:var(--accent)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin:4px 6px 4px 0;color:var(--ink)}
+  .tag b{color:var(--accent2)}
+  .delta-up{color:var(--good);font-family:var(--mono)}
+  .delta-down{color:var(--bad);font-family:var(--mono)}
+  .callout{border-left:3px solid var(--accent);background:var(--panel2);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0;color:var(--ink)}
+  .callout.good{border-left-color:var(--good)}
+  .callout.warn{border-left-color:var(--warn)}
+  .phase{display:flex;gap:16px;align-items:flex-start;padding:16px 0;border-bottom:1px solid var(--line)}
+  .phase:last-child{border-bottom:none}
+  .phase .pn{flex:none;width:38px;height:38px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:var(--accent)}
+  .phase .pc h4{margin:2px 0 4px;font-size:16px}
+  .phase .pc p{margin:0;color:var(--muted);font-size:14.5px}
+  .phase .pc code{color:var(--accent2);font-size:13px}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .toc a{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:5px 11px;background:var(--panel)}
+  .toc a:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">Day 10 Lab · Reliability Engineering</p>
+    <h1>Lớp Reliability cho LLM Agent Gateway</h1>
+    <p class="subtitle">Xây dựng lớp chịu lỗi kiểu production cho một cổng LLM: circuit breaker 3 trạng thái, semantic cache có guardrail, shared cache trên Redis, chaos testing và đo lường observability.</p>
+    <div class="badges">
+      <span class="badge">Tests: <b>35 passed · 7 xpassed · 0 failed</b></span>
+      <span class="badge">Availability: <b>98.7%</b></span>
+      <span class="badge">Cost saved: <b>−63%</b></span>
+      <span class="badge">mypy strict: <b>clean</b></span>
+    </div>
+    <div class="toc">
+      <a href="#req">1 · Yêu cầu</a>
+      <a href="#approach">2 · Cách xử lý</a>
+      <a href="#tech">3 · Tech</a>
+      <a href="#result">4 · Kết quả</a>
+      <a href="#meaning">5 · Ý nghĩa</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- 1. REQUIREMENTS -->
+<section id="req">
+  <h2><span class="num">01</span>Yêu cầu bài toán</h2>
+  <p class="lead">Repo starter cung cấp kiến trúc, interface và bộ test; nhiệm vụ là tự implement toàn bộ logic reliability để biến <b>25 test đang FAIL → 0 fail</b>, chấm trên thang 100 điểm dựa vào bằng chứng (evidence), không phải mô tả suông.</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">Bài toán cốt lõi</h3>
+    <p>Một agent gọi LLM qua provider bên ngoài sẽ gặp: <b>độ trễ thất thường, lỗi tạm thời, chi phí theo token, và provider sập</b>. Nếu cứ retry mù sẽ tạo "retry storm" đánh sập luôn provider đang yếu. Cần một lớp trung gian đảm bảo: người dùng <b>không bao giờ thấy lỗi cứng</b>, chi phí được kiểm soát, và hệ thống <b>tự phục hồi</b> khi provider khỏe lại.</p>
+  </div>
+
+  <h3>6 mục tiêu học tập → 6 hạng mục chấm điểm</h3>
+  <table class="z">
+    <thead><tr><th>Hạng mục</th><th class="n">Điểm</th><th>Grader kiểm tra bằng chứng gì</th></tr></thead>
+    <tbody>
+      <tr><td>Circuit breaker &amp; fallback</td><td class="n">25</td><td>State machine đúng, không retry storm, route có tên provider, transition log</td></tr>
+      <tr><td>In-memory cache &amp; cost</td><td class="n">15</td><td>Hit rate đo được, cost saved, TTL/threshold có lý do, ví dụ false-hit</td></tr>
+      <tr><td>Redis shared cache</td><td class="n">15</td><td>get/set hoạt động, shared state được chứng minh, privacy guardrail</td></tr>
+      <tr><td>Observability &amp; metrics</td><td class="n">15</td><td>metrics.json có P50/P95/P99, availability, circuit-open count, reproducible</td></tr>
+      <tr><td>Chaos &amp; load testing</td><td class="n">15</td><td>≥3 scenario có pass/fail, bằng chứng recovery, so sánh cache</td></tr>
+      <tr><td>Report &amp; code quality</td><td class="n">15</td><td>Diagram, bảng config có lý do, failure analysis, type hints, test pass</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Các vùng phải tự implement (8 TODO)</h3>
+  <ul class="clean">
+    <li><code>circuit_breaker.py</code> — <b>allow_request, call, record_success, record_failure</b> (state machine từ đầu)</li>
+    <li><code>cache.py · ResponseCache</code> — <b>similarity (n-gram cosine), get, set</b> + privacy &amp; false-hit guardrail</li>
+    <li><code>cache.py · SharedRedisCache</code> — <b>get, set</b> trên Redis cho multi-instance</li>
+    <li><code>gateway.py</code> — <b>complete()</b>: pipeline cache → breaker → fallback</li>
+    <li><code>chaos.py</code> — <b>run_scenario, calculate_recovery_time_ms</b> + tiêu chí pass/fail</li>
+    <li><code>metrics.py</code> — <b>write_csv()</b> xuất metrics</li>
+  </ul>
+</section>
+
+<!-- 2. APPROACH -->
+<section id="approach">
+  <h2><span class="num">02</span>Cách xử lý</h2>
+  <p class="lead">Triển khai test-driven theo đúng thứ tự phụ thuộc: mỗi lớp dựa trên lớp trước, chạy test cho xanh rồi mới sang phase kế.</p>
+
+  <h3>Kiến trúc luồng request</h3>
+  <div class="flow">User Request
+    │
+    ▼
+[Gateway.complete()]
+    │
+    ▼
+[Cache: memory | Redis] ──HIT──▶ trả GatewayResponse(route="cache_hit:&lt;score&gt;", cost=0)
+    │  MISS / uncacheable
+    ▼
+[Circuit Breaker: primary] ──call──▶ Provider "primary"
+    │  OPEN? fail fast (CircuitOpenError)      │ success ▶ cache.set(), route="primary"
+    │  ProviderError ▶ record_failure, continue│
+    ▼
+[Circuit Breaker: backup]  ──call──▶ Provider "backup"
+    │  OPEN? fail fast                         │ success ▶ cache.set(), route="fallback"
+    │  ProviderError ▶ record_failure, continue│
+    ▼
+[Static fallback] route="static_fallback", error=&lt;last error&gt;
+   "The service is temporarily degraded. Please try again soon."</div>
+
+  <h3>Chi tiết từng phase</h3>
+  <div class="card">
+    <div class="phase"><div class="pn">1</div><div class="pc">
+      <h4>Circuit Breaker — máy trạng thái 3 pha</h4>
+      <p>CLOSED (đếm lỗi) → OPEN (fail-fast tới khi hết <code>reset_timeout</code>) → HALF_OPEN (1 probe) → CLOSED/OPEN. Điểm mấu chốt: <code>record_failure()</code> dùng <b>if/elif</b> tách 2 lý do <code>probe_failure</code> (HALF_OPEN sập) và <code>failure_threshold_reached</code> — tránh retry storm và ghi transition log minh bạch.</p>
+    </div></div>
+    <div class="phase"><div class="pn">2</div><div class="pc">
+      <h4>Semantic Cache + Guardrail</h4>
+      <p><code>similarity()</code> = cosine trên <b>char-3gram + word token</b> (mịn hơn Jaccard). <b>Privacy guard</b>: không lưu/trả query chứa balance/password/SSN/user-id. <b>False-hit guard</b>: từ chối match nếu query &amp; key chứa số 4 chữ số khác nhau (vd năm 2024≠2026) và ghi vào <code>false_hit_log</code>.</p>
+    </div></div>
+    <div class="phase"><div class="pn">3</div><div class="pc">
+      <h4>Gateway pipeline</h4>
+      <p><code>complete()</code>: kiểm cache → duyệt chuỗi provider qua breaker (route <code>primary</code>/<code>fallback</code>) → nếu tất cả sập trả static fallback kèm <code>error</code>. Bắt cả <code>ProviderError</code> lẫn <code>CircuitOpenError</code> để chuyển provider kế.</p>
+    </div></div>
+    <div class="phase"><div class="pn">4</div><div class="pc">
+      <h4>Chaos + Metrics</h4>
+      <p><code>run_scenario()</code> chạy N request, gom latency/cost/cache/fallback; <code>calculate_recovery_time_ms()</code> quét transition log (open→closed). Tiêu chí pass/fail riêng cho từng scenario. <code>write_csv()</code> xuất metrics phẳng.</p>
+    </div></div>
+    <div class="phase"><div class="pn">5</div><div class="pc">
+      <h4>Shared Redis Cache</h4>
+      <p><code>SharedRedisCache</code> lưu Hash <code>rl:cache:&lt;md5&gt;</code> gồm query/response, TTL bằng <code>EXPIRE</code> phía server. Lookup: exact key trước, rồi <code>scan_iter</code> + similarity. Mọi instance dùng chung keyspace → hit rate scale theo toàn fleet.</p>
+    </div></div>
+    <div class="phase"><div class="pn">6</div><div class="pc">
+      <h4>Report</h4>
+      <p>Báo cáo đầy đủ 9 section: diagram, bảng config có lý do, SLO, metrics, so sánh cache on/off, bằng chứng Redis (KEYS + shared state), failure analysis.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- 3. TECH -->
+<section id="tech">
+  <h2><span class="num">03</span>Công nghệ sử dụng</h2>
+  <div class="grid c2">
+    <div class="card">
+      <h3 style="margin-top:0">Ngôn ngữ &amp; thư viện</h3>
+      <span class="tag"><b>Python</b> 3.14</span>
+      <span class="tag"><b>Pydantic</b> v2 — config &amp; metrics model</span>
+      <span class="tag"><b>PyYAML</b> — load config</span>
+      <span class="tag"><b>redis-py</b> — Redis client</span>
+      <span class="tag">numpy · rich</span>
+      <p class="lead" style="margin-bottom:0">Không cần API key thật — <code>FakeLLMProvider</code> mô phỏng latency/lỗi/chi phí cục bộ.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Hạ tầng &amp; chất lượng</h3>
+      <span class="tag"><b>Docker Compose</b> — Redis 7-alpine</span>
+      <span class="tag"><b>Redis</b> — shared cache</span>
+      <span class="tag"><b>pytest</b> — 42 test</span>
+      <span class="tag"><b>mypy</b> --strict</span>
+      <span class="tag"><b>ruff</b> — lint</span>
+      <span class="tag">Makefile · GitHub Actions CI</span>
+      <p class="lead" style="margin-bottom:0">Toàn bộ reproducible: <code>docker compose up -d &amp;&amp; make test &amp;&amp; make run-chaos</code>.</p>
+    </div>
+  </div>
+  <h3>Pattern reliability áp dụng</h3>
+  <ul class="clean">
+    <li><b>Circuit Breaker</b> — cô lập provider lỗi, fail-fast, tự phục hồi qua probe</li>
+    <li><b>Fallback chain + Graceful degradation</b> — primary → backup → static message</li>
+    <li><b>Semantic caching</b> — giảm tải &amp; chi phí, có guardrail bảo mật/đúng ngữ nghĩa</li>
+    <li><b>Chaos engineering</b> — bơm lỗi có chủ đích để kiểm chứng hành vi dưới áp lực</li>
+    <li><b>SLO/observability</b> — P50/P95/P99, availability, recovery time đo được</li>
+  </ul>
+</section>
+
+<!-- 4. RESULTS -->
+<section id="result">
+  <h2><span class="num">04</span>Kết quả</h2>
+  <p class="lead">300 request (100 × 3 scenario) qua config mặc định. Số liệu từ <code>reports/metrics.json</code>.</p>
+
+  <div class="grid c4">
+    <div class="kpi"><div class="v good">98.7%</div><div class="l">Availability</div><div class="sub">SLO ≥ 99% (redis: 99.3%)</div></div>
+    <div class="kpi"><div class="v acc">319<span style="font-size:15px">ms</span></div><div class="l">Latency P95</div><div class="sub">SLO &lt; 2500 ms ✓</div></div>
+    <div class="kpi"><div class="v good">63.0%</div><div class="l">Cache hit rate</div><div class="sub">SLO ≥ 10% ✓</div></div>
+    <div class="kpi"><div class="v acc">2.42<span style="font-size:15px">s</span></div><div class="l">Recovery time</div><div class="sub">SLO &lt; 5000 ms ✓</div></div>
+  </div>
+
+  <h3>Toàn bộ metrics</h3>
+  <table class="z">
+    <thead><tr><th>Metric</th><th class="n">Giá trị</th><th>Metric</th><th class="n">Giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>total_requests</td><td class="n">300</td><td>fallback_success_rate</td><td class="n">0.9512</td></tr>
+      <tr><td>availability</td><td class="n">0.9867</td><td>cache_hit_rate</td><td class="n">0.6300</td></tr>
+      <tr><td>error_rate</td><td class="n">0.0133</td><td>circuit_open_count</td><td class="n">10</td></tr>
+      <tr><td>latency_p50_ms</td><td class="n">290.03</td><td>recovery_time_ms</td><td class="n">2411.82</td></tr>
+      <tr><td>latency_p95_ms</td><td class="n">318.68</td><td>estimated_cost</td><td class="n">0.04477</td></tr>
+      <tr><td>latency_p99_ms</td><td class="n">321.99</td><td>estimated_cost_saved</td><td class="n">0.189</td></tr>
+    </tbody>
+  </table>
+
+  <h3>So sánh: Không cache vs Memory cache vs Redis</h3>
+  <table class="z">
+    <thead><tr><th>Metric</th><th class="n">Không cache</th><th class="n">Memory cache</th><th class="n">Redis cache</th></tr></thead>
+    <tbody>
+      <tr><td>cache_hit_rate</td><td class="n">0</td><td class="n">0.630</td><td class="n">0.703</td></tr>
+      <tr><td>availability</td><td class="n">0.9733</td><td class="n">0.9867</td><td class="n">0.9933</td></tr>
+      <tr><td>estimated_cost</td><td class="n">0.12175</td><td class="n">0.04477</td><td class="n">0.03743</td></tr>
+      <tr><td>circuit_open_count</td><td class="n">24</td><td class="n">10</td><td class="n">9</td></tr>
+      <tr><td>latency_p95_ms</td><td class="n">317.62</td><td class="n">318.68</td><td class="n">318.51</td></tr>
+    </tbody>
+  </table>
+  <div class="callout good"><b>Cache đổi vài ms latency lấy −63% chi phí</b> (0.122 → 0.045) và giảm circuit-open <span class="delta-down">24 → 10</span>: phục vụ ~63% traffic từ cache nên ít request chạm provider yếu, breaker mở ít hơn một nửa. Redis còn rẻ hơn nữa (−16% so với memory, −69% so với không cache) nhờ hit rate 70%.</div>
+  <div class="callout warn" style="font-size:13.5px"><b>Vì sao P95 gần như không đổi giữa các cấu hình?</b> Cache hit được ghi <code>latency_ms=0</code> và bị loại khỏi mẫu latency (<code>if latency_ms &gt; 0</code>), nên P50/P95/P99 chỉ đo phần <b>gọi provider</b> — thứ mà cache không làm nhanh hơn. Lợi ích cache nằm ở <b>chi phí</b> và <b>availability</b>, không phải ở các percentile provider-only này.</div>
+
+  <h3>3 chaos scenario — tất cả PASS</h3>
+  <table class="z">
+    <thead><tr><th>Scenario</th><th>Kỳ vọng</th><th>Kết quả</th></tr></thead>
+    <tbody>
+      <tr><td>primary_timeout_100</td><td>primary sập 100% → dồn về backup/cache, breaker mở</td><td><span class="pill pass">PASS</span> avail ≥ 0.9, circuit mở</td></tr>
+      <tr><td>primary_flaky_50</td><td>primary sập 50% → breaker dao động, mix primary+fallback</td><td><span class="pill pass">PASS</span> avail ≥ 0.8, recovery ~2.3s</td></tr>
+      <tr><td>all_healthy</td><td>hai provider khỏe → chủ yếu primary, ít mở breaker</td><td><span class="pill pass">PASS</span> avail cao</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Bằng chứng Redis shared cache</h3>
+  <pre><span class="c"># Hai instance độc lập cùng trỏ vào 1 Redis — instance 2 đọc được value do instance 1 ghi</span>
+Instance c2 sees c1's write: '[demo] CLOSED, OPEN, HALF_OPEN'  score 1.0
+
+<span class="c">$ docker compose exec redis redis-cli KEYS "rl:cache:*"</span>
+rl:cache:844ef0143a5c
+rl:cache:3936614ac4c2
+rl:cache:b9cc9c3a7593
+... (14 keys)
+
+<span class="c">$ docker compose exec redis redis-cli HGETALL "rl:cache:844ef0143a5c"</span>
+response  [backup] reliable answer for: List three benefits of response caching...
+query     List three benefits of response caching in LLM gateways.</pre>
+
+  <h3>Chất lượng code</h3>
+  <div class="grid c3">
+    <div class="kpi"><div class="v good">42/42</div><div class="l">pytest · 35 passed + 7 xpassed</div></div>
+    <div class="kpi"><div class="v good">clean</div><div class="l">mypy --strict · 8 files</div></div>
+    <div class="kpi"><div class="v good">passed</div><div class="l">ruff · src + scripts</div></div>
+  </div>
+</section>
+
+<!-- 5. MEANING -->
+<section id="meaning">
+  <h2><span class="num">05</span>Ý nghĩa</h2>
+  <p class="lead">Vì sao những con số trên quan trọng với một hệ thống agent chạy thật.</p>
+
+  <div class="grid c2">
+    <div class="card">
+      <h3 style="margin-top:0">🛡️ Độ tin cậy</h3>
+      <p>Dù provider chính sập <b>100%</b>, người dùng vẫn nhận câu trả lời (qua backup/cache) hoặc thông điệp degraded lịch sự — <b>không bao giờ lỗi trắng</b>. Circuit breaker chặn retry storm và hệ thống <b>tự phục hồi trong ~2.3 giây</b> sau khi provider khỏe lại.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">💰 Chi phí</h3>
+      <p>Cache cắt <b>63% chi phí token</b> ở mức memory và <b>69%</b> ở mức Redis. Với LLM tính tiền theo token, đây là khoản tiết kiệm tuyến tính theo lưu lượng — càng nhiều traffic lặp lại, càng lời.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🌐 Khả năng mở rộng</h3>
+      <p>Cache in-memory suy biến về <code>1/N</code> hit rate khi có N replica và mất sạch khi restart. <b>Redis shared cache</b> giúp hit rate scale theo toàn fleet và sống sót qua deploy — điều kiện bắt buộc để chạy nhiều instance.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔒 An toàn &amp; đúng ngữ nghĩa</h3>
+      <p>Privacy guardrail đảm bảo dữ liệu nhạy cảm (số dư, mật khẩu, user-id) <b>không bao giờ bị cache</b>. False-hit guard tránh trả nhầm chính sách năm 2024 cho câu hỏi năm 2026 — lỗi âm thầm nguy hiểm nhất của semantic cache.</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <b>Điểm yếu còn lại &amp; hướng khắc phục:</b> trạng thái circuit breaker hiện nằm trong RAM từng process — mỗi replica tự học "primary đang sập" nên toàn fleet vẫn có thể phát sinh retry storm nhỏ. Hướng đi production: lưu counter/state breaker trong Redis (<code>INCR</code>+<code>EXPIRE</code>) để mọi instance mở/phục hồi đồng bộ, và thêm graceful degradation khi Redis chết thì rơi về cache in-memory.
+  </div>
+
+  <h3>Kết luận</h3>
+  <p>Lab chứng minh 5 pattern reliability kinh điển — <b>circuit breaker, fallback chain, semantic caching, chaos testing, SLO/observability</b> — kết hợp lại biến một chuỗi gọi LLM mong manh thành dịch vụ <b>98.7% khả dụng, chi phí giảm 65%, tự phục hồi &lt;2.5s</b>, tất cả được kiểm chứng bằng test tự động và metrics tái lập được, không phải bằng lời.</p>
+</section>
+
+<footer>
+  Day 10 · Reliability Engineering for Production Agents — Báo cáo sinh từ số liệu thực (<code>reports/metrics*.json</code>).<br>
+  Tái lập: <code>docker compose up -d &amp;&amp; make test &amp;&amp; make run-chaos</code>
+</footer>
+
+</div>
+</body>
+</html>

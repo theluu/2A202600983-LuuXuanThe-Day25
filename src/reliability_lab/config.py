@@ -44,6 +44,7 @@ class LabConfig(BaseModel):
     cache: CacheConfig
     load_test: LoadTestConfig
     scenarios: list[ScenarioConfig] = Field(default_factory=list)
+    seed: int | None = None  # set for reproducible chaos runs; None = nondeterministic
 
 
 def load_config(path: str | Path) -> LabConfig:

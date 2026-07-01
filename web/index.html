@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reliability Gateway — Test UI</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--line:#2b3444;--ink:#e6edf3;--muted:#9aa7b4;
+    --accent:#4ea1ff;--good:#3fb950;--warn:#f2cc60;--bad:#ff7b72;--purple:#bc8cff;
+    --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px 80px}
+  header{background:linear-gradient(135deg,#12233f,#0d1117 65%);border-bottom:1px solid var(--line);padding:30px 0 22px;margin-bottom:22px}
+  h1{font-size:24px;margin:0;font-weight:800;letter-spacing:-.4px}
+  .sub{color:var(--muted);margin:6px 0 0;font-size:14px}
+  .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:7px;box-shadow:0 0 8px var(--good)}
+  nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+  nav button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 15px;border-radius:9px;font-size:14px;cursor:pointer;font-weight:600}
+  nav button.active{background:var(--panel2);color:var(--accent);border-color:var(--accent)}
+  .tab{display:none} .tab.active{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin:14px 0}
+  h2{font-size:19px;margin:0 0 4px} h3{font-size:15px;margin:18px 0 6px}
+  .lead{color:var(--muted);font-size:14px;margin:2px 0 14px}
+  button.act{background:var(--accent);color:#04203f;border:none;padding:10px 18px;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
+  button.act:disabled{opacity:.5;cursor:wait}
+  button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:9px 15px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
+  .grid{display:grid;gap:12px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:720px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:14px}
+  .kpi .v{font-size:24px;font-weight:800;font-family:var(--mono)} .kpi .l{color:var(--muted);font-size:12px;margin-top:3px}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:5px;font-weight:700}
+  .PASSED,.XPASS{background:rgba(63,185,80,.16);color:var(--good);border:1px solid rgba(63,185,80,.35)}
+  .FAILED,.ERROR{background:rgba(255,123,114,.16);color:var(--bad);border:1px solid rgba(255,123,114,.4)}
+  .XFAIL,.SKIPPED{background:rgba(242,204,96,.14);color:var(--warn);border:1px solid rgba(242,204,96,.35)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;background:var(--panel2)}
+  td.n,th.n{text-align:right;font-family:var(--mono)}
+  code,pre{font-family:var(--mono)} pre{background:#0a0e14;border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:12.5px;color:#c9d5e1;line-height:1.5}
+  input[type=text]{width:100%;background:#0a0e14;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:11px 13px;font-size:14px;font-family:var(--mono)}
+  input[type=range]{width:100%}
+  .bar{height:22px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-family:var(--mono);font-size:12px;color:#04203f;font-weight:700;min-width:34px}
+  .bar.alt{background:var(--purple);color:#1a0f2e}
+  .barlabel{font-size:12px;color:var(--muted);margin:8px 0 3px}
+  .state{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:700;font-size:14px}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .closed{color:var(--good)} .closed .dot{background:var(--good)}
+  .open{color:var(--bad)} .open .dot{background:var(--bad);animation:pulse 1s infinite}
+  .half_open{color:var(--warn)} .half_open .dot{background:var(--warn)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 9px;margin:3px 5px 3px 0}
+  .tag b{color:var(--accent)}
+  .muted{color:var(--muted)} .mono{font-family:var(--mono)}
+  ul.clean{list-style:none;padding:0;margin:8px 0}ul.clean li{padding:6px 0 6px 22px;position:relative;border-bottom:1px solid var(--line);font-size:14px}
+  ul.clean li:last-child{border-bottom:none}ul.clean li::before{content:"▸";position:absolute;left:2px;color:var(--accent)}
+  .flag{font-family:var(--mono);font-size:12.5px;padding:3px 9px;border-radius:6px;margin-right:6px}
+  .flag.on{background:rgba(255,123,114,.16);color:var(--bad);border:1px solid rgba(255,123,114,.35)}
+  .flag.off{background:rgba(63,185,80,.13);color:var(--good);border:1px solid rgba(63,185,80,.3)}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1><span class="live"></span>Reliability Gateway — Test UI</h1>
+  <p class="sub">Dashboard trực quan chạy <b>code Python thật</b> của dự án (circuit breaker · cache · Redis · chaos). Không mô phỏng bằng JS.</p>
+  <nav>
+    <button data-tab="tests" class="active">✅ Test Suite</button>
+    <button data-tab="compare">📊 Cache vs No-cache</button>
+    <button data-tab="cache">🧠 Kỹ thuật Cache</button>
+    <button data-tab="redis">🔗 Vai trò Redis</button>
+    <button data-tab="play">🎮 Playground</button>
+  </nav>
+</div></header>
+
+<div class="wrap">
+
+<!-- ============ TESTS ============ -->
+<div class="tab active" id="tab-tests">
+  <div class="card">
+    <h2>Toàn bộ test case của dự án</h2>
+    <p class="lead">Chạy thật <code>pytest -v</code> trên máy và hiển thị từng test theo file. XPASS = test xfail đã "unexpectedly pass" (hoàn thành TODO). Cần Redis chạy để 6 test Redis không bị SKIP.</p>
+    <button class="act" onclick="runTests()" id="btnTests">▶ Chạy toàn bộ test</button>
+    <span id="testsSummary" class="muted mono" style="margin-left:12px"></span>
+    <div id="testsCounts" class="grid g4" style="margin-top:14px"></div>
+    <div id="testsOut"></div>
+  </div>
+</div>
+
+<!-- ============ COMPARE ============ -->
+<div class="tab" id="tab-compare">
+  <div class="card">
+    <h2>So sánh: Có cache vs Không cache</h2>
+    <p class="lead">Chạy live 2 lần cùng bộ query (40 request/lần) — một lần <code>cache.enabled=true</code>, một lần <code>false</code>. Cùng provider (primary fail 25%).</p>
+    <button class="act" onclick="runCompare()" id="btnCmp">▶ Chạy so sánh</button>
+    <div id="cmpOut" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ============ CACHE TECH ============ -->
+<div class="tab" id="tab-cache">
+  <div class="card">
+    <h2>Kỹ thuật cache đang dùng</h2>
+    <ul class="clean">
+      <li><b>Semantic similarity = Cosine trên character 3-gram + word token.</b> Mỗi câu tách thành từ + các 3-ký-tự (vd "hello"→hel,ell,llo), đếm tần suất thành vector, tính cosine. Mịn hơn Jaccard (đo trùng token thô).</li>
+      <li><b>Privacy guardrail</b> — regex chặn query chứa <span class="mono">balance / password / ssn / user-&lt;số&gt; / account-&lt;số&gt;</span>: không lưu, không trả từ cache.</li>
+      <li><b>False-hit guardrail</b> — nếu 2 câu chứa số 4 chữ số khác nhau (vd năm 2024≠2026) thì từ chối dù điểm cao, ghi vào <code>false_hit_log</code>.</li>
+      <li><b>TTL</b> 300s + ngưỡng similarity <b>0.92</b> (test cho thấy 0.85 gây false-hit).</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Thử similarity thật (gọi <code>ResponseCache.similarity</code>)</h3>
+    <div class="grid g2">
+      <div><div class="barlabel">Câu A</div><input type="text" id="simA" value="Summarize the refund policy for 2024"></div>
+      <div><div class="barlabel">Câu B</div><input type="text" id="simB" value="Summarize refund policy for 2026"></div>
+    </div>
+    <button class="act" style="margin-top:12px" onclick="runSim()">Tính điểm</button>
+    <div id="simOut" style="margin-top:14px"></div>
+    <div class="grid g3" style="margin-top:10px">
+      <button class="ghost" onclick="preset('circuit breaker states','explain circuit breaker state machine')">Ví dụ: gần nghĩa</button>
+      <button class="ghost" onclick="preset('account balance for user 123','account balance for user 123')">Ví dụ: privacy</button>
+      <button class="ghost" onclick="preset('policy for 2024','policy for 2026')">Ví dụ: false-hit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REDIS ============ -->
+<div class="tab" id="tab-redis">
+  <div class="card">
+    <h2>Vai trò của Redis</h2>
+    <ul class="clean">
+      <li><b>Vấn đề:</b> cache in-memory nằm trong RAM từng process. Có N instance sau load balancer → query cache ở instance A là MISS ở B…N, hit rate tụt còn ~1/N; mất sạch khi restart/deploy.</li>
+      <li><b>Giải pháp:</b> <code>SharedRedisCache</code> lưu chung 1 keyspace Redis (Hash <span class="mono">rl:cache:&lt;md5&gt;</span> gồm query/response, TTL qua <code>EXPIRE</code>). Mọi instance thấy chung → hit rate scale theo toàn fleet, sống sót qua deploy.</li>
+      <li><b>Cùng guardrail:</b> privacy + false-hit áp dụng y hệt bản in-memory.</li>
+    </ul>
+    <button class="act" onclick="runRedis()" id="btnRedis">▶ Chứng minh shared state (A ghi → B đọc)</button>
+    <div id="redisOut" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- ============ PLAYGROUND ============ -->
+<div class="tab" id="tab-play">
+  <div class="card">
+    <h2>Playground — bắn request thật qua gateway</h2>
+    <p class="lead">Chỉnh fail rate → xem circuit breaker mở/đóng, cache hit, route (primary/fallback/static). Mỗi lần gửi gọi <code>ReliabilityGateway.complete()</code> thật.</p>
+    <div class="grid g2">
+      <div>
+        <div class="barlabel">Fail rate — primary: <b id="pfLbl" class="mono">0.25</b></div>
+        <input type="range" id="pf" min="0" max="1" step="0.05" value="0.25" oninput="pfLbl.textContent=(+this.value).toFixed(2)">
+      </div>
+      <div>
+        <div class="barlabel">Fail rate — backup: <b id="bfLbl" class="mono">0.05</b></div>
+        <input type="range" id="bf" min="0" max="1" step="0.05" value="0.05" oninput="bfLbl.textContent=(+this.value).toFixed(2)">
+      </div>
+    </div>
+    <div style="margin-top:12px"><button class="ghost" onclick="applyCfg()">Áp dụng fail rate (rebuild + reset)</button>
+      <button class="ghost" onclick="resetSession()">Reset session</button></div>
+    <div style="margin-top:14px"><input type="text" id="prompt" value="Explain circuit breaker states in one paragraph."></div>
+    <div style="margin-top:10px">
+      <button class="act" onclick="send()">▶ Gửi 1 request</button>
+      <button class="ghost" onclick="burst(10)">Bắn 10 lần</button>
+      <button class="ghost" onclick="burst(30)">Bắn 30 lần</button>
+      <span id="playPrompt" class="muted mono" style="margin-left:8px"></span>
+    </div>
+    <div id="lastResp" style="margin-top:14px"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Circuit breakers</h3>
+    <div id="breakers" class="grid g2"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Metrics phiên (live)</h3>
+    <div id="playMetrics" class="grid g4"></div>
+    <div id="cacheInfo" class="muted mono" style="margin-top:12px;font-size:13px"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null});return r.json()}
+async function get(url){const r=await fetch(url);return r.json()}
+
+// tabs
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');$('#tab-'+b.dataset.tab).classList.add('active');
+});
+
+// ---------- TESTS ----------
+async function runTests(){
+  const btn=$('#btnTests');btn.disabled=true;$('#testsSummary').innerHTML='<span class="spin"></span> đang chạy pytest...';
+  $('#testsOut').innerHTML='';$('#testsCounts').innerHTML='';
+  try{
+    const d=await post('/api/tests');
+    $('#testsSummary').textContent=d.summary||'';
+    const order=['PASSED','XPASS','XFAIL','SKIPPED','FAILED','ERROR'];
+    $('#testsCounts').innerHTML=order.filter(k=>d.counts[k]).map(k=>
+      `<div class="kpi"><div class="v"><span class="pill ${k}">${d.counts[k]}</span></div><div class="l">${k}</div></div>`).join('');
+    let html='';
+    for(const [file,tests] of Object.entries(d.files)){
+      html+=`<h3>${file} <span class="muted">(${tests.length})</span></h3><table>`;
+      for(const t of tests) html+=`<tr><td class="mono">${t.name}</td><td style="text-align:right"><span class="pill ${t.status}">${t.status}</span></td></tr>`;
+      html+='</table>';
+    }
+    $('#testsOut').innerHTML=html;
+  }catch(e){$('#testsSummary').textContent='Lỗi: '+e}
+  btn.disabled=false;
+}
+
+// ---------- COMPARE ----------
+function barRow(label,a,b,fmt,invert){
+  const max=Math.max(a,b)||1;const wa=Math.max(6,a/max*100),wb=Math.max(6,b/max*100);
+  return `<div class="barlabel">${label}</div>
+    <div style="display:flex;gap:8px;align-items:center"><div style="width:110px;color:var(--muted);font-size:12px">Không cache</div><div class="bar" style="width:${wa}%">${fmt(a)}</div></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:5px"><div style="width:110px;color:var(--muted);font-size:12px">Có cache</div><div class="bar alt" style="width:${wb}%">${fmt(b)}</div></div>`;
+}
+async function runCompare(){
+  const btn=$('#btnCmp');btn.disabled=true;$('#cmpOut').innerHTML='<span class="spin"></span> đang chạy 2×40 request thật...';
+  try{
+    const d=await post('/api/compare');const wo=d.without,wc=d.with;
+    const money=x=>'$'+(+x).toFixed(4),pct=x=>(+x*100).toFixed(1)+'%',num=x=>(+x).toFixed(0);
+    $('#cmpOut').innerHTML=`
+      <div class="grid g3">
+        <div class="kpi"><div class="v" style="color:var(--good)">−${d.cost_saved_pct}%</div><div class="l">Chi phí tiết kiệm nhờ cache</div></div>
+        <div class="kpi"><div class="v mono">${pct(wc.cache_hit_rate)}</div><div class="l">Cache hit rate (có cache)</div></div>
+        <div class="kpi"><div class="v mono">${wo.circuit_open_count} → ${wc.circuit_open_count}</div><div class="l">Circuit open (ít hơn nhờ cache)</div></div>
+      </div>
+      <div class="card" style="background:var(--panel2)">
+        ${barRow('💰 Chi phí ước tính',wo.estimated_cost,wc.estimated_cost,money)}
+        <div style="height:10px"></div>
+        ${barRow('✅ Availability',wo.availability,wc.availability,pct)}
+        <div style="height:10px"></div>
+        ${barRow('⚡ Latency P95 (ms)',wo.latency_p95_ms,wc.latency_p95_ms,num)}
+      </div>
+      <p class="muted" style="font-size:13px">Cache đổi vài ms latency lấy chi phí giảm mạnh + availability cao hơn (ít request chạm provider yếu → breaker mở ít hơn).</p>`;
+  }catch(e){$('#cmpOut').textContent='Lỗi: '+e}
+  btn.disabled=false;
+}
+
+// ---------- SIMILARITY ----------
+function preset(a,b){$('#simA').value=a;$('#simB').value=b;runSim()}
+async function runSim(){
+  const d=await post('/api/similarity',{a:$('#simA').value,b:$('#simB').value});
+  const flag=(on,txt)=>`<span class="flag ${on?'on':'off'}">${on?'⛔ '+txt:'✓ không '+txt}</span>`;
+  $('#simOut').innerHTML=`
+    <div class="grid g3">
+      <div class="kpi"><div class="v mono" style="color:${d.would_hit?'var(--good)':'var(--muted)'}">${d.score}</div><div class="l">cosine similarity</div></div>
+      <div class="kpi"><div class="v mono">${d.threshold}</div><div class="l">ngưỡng</div></div>
+      <div class="kpi"><div class="v" style="color:${d.would_hit&&!d.false_hit&&!d.privacy_blocked?'var(--good)':'var(--bad)'}">${d.would_hit&&!d.false_hit&&!d.privacy_blocked?'HIT':'MISS'}</div><div class="l">kết quả cache</div></div>
+    </div>
+    <div style="margin-top:10px">${flag(d.privacy_blocked,'privacy chặn')} ${flag(d.false_hit,'false-hit (số khác nhau)')}</div>`;
+}
+
+// ---------- REDIS ----------
+async function runRedis(){
+  const btn=$('#btnRedis');btn.disabled=true;$('#redisOut').innerHTML='<span class="spin"></span> đang kết nối Redis...';
+  const d=await post('/api/redis-demo');
+  if(!d.available){$('#redisOut').innerHTML=`<div class="flag on">Redis không sẵn sàng: ${d.error||''}</div><p class="muted" style="font-size:13px">Chạy <code>docker compose up -d</code> rồi thử lại.</p>`;btn.disabled=false;return}
+  $('#redisOut').innerHTML=`
+    <div class="kpi" style="margin-bottom:10px"><div class="v" style="color:var(--good);font-size:18px">✓ Shared state OK</div>
+    <div class="l">Instance <b>A</b> ghi → instance <b>B</b> đọc được (score ${d.score})</div></div>
+    <pre># Instance B đọc value chỉ do A ghi:
+"${d.value}"
+
+# Redis keys (rl:uidemo:*)  — ${d.keys.length} key
+${d.keys.join('\n')||'(none)'}</pre>`;
+  btn.disabled=false;
+}
+
+// ---------- PLAYGROUND ----------
+function renderState(s){
+  $('#breakers').innerHTML=s.breakers.map(b=>{
+    const trans=b.transitions.slice(-3).map(t=>`${t.from}→${t.to} <span class="muted">(${t.reason})</span>`).join('<br>')||'<span class="muted">chưa có</span>';
+    return `<div class="kpi"><div class="state ${b.state}"><span class="dot"></span>${b.name} · ${b.state.toUpperCase()}</div>
+      <div class="l" style="margin-top:6px">fail_rate <b class="mono">${b.fail_rate}</b> · fails <b class="mono">${b.failure_count}/${b.failure_threshold}</b></div>
+      <div class="mono" style="font-size:11.5px;margin-top:8px;color:var(--muted)">${trans}</div></div>`;
+  }).join('');
+  const m=s.metrics;
+  const pct=x=>(x*100).toFixed(1)+'%';
+  $('#playMetrics').innerHTML=`
+    <div class="kpi"><div class="v mono">${m.total_requests}</div><div class="l">requests</div></div>
+    <div class="kpi"><div class="v mono" style="color:var(--good)">${pct(m.availability)}</div><div class="l">availability</div></div>
+    <div class="kpi"><div class="v mono">${pct(m.cache_hit_rate)}</div><div class="l">cache hit</div></div>
+    <div class="kpi"><div class="v mono" style="color:var(--bad)">${m.circuit_open_count}</div><div class="l">circuit opens</div></div>`;
+  $('#cacheInfo').textContent=`cache: ${s.cache.backend} · ${s.cache.size} entries · false-hits: ${s.cache.false_hits}`;
+}
+async function refresh(){renderState(await get('/api/state'))}
+async function applyCfg(){renderState(await post('/api/config',{primary_fail:+$('#pf').value,backup_fail:+$('#bf').value}))}
+async function resetSession(){renderState(await post('/api/reset'));$('#lastResp').innerHTML=''}
+async function send(){
+  const d=await post('/api/complete',{prompt:$('#prompt').value});const r=d.response;
+  const color=r.route.startsWith('cache')?'var(--purple)':r.route==='primary'?'var(--good)':r.route==='fallback'?'var(--warn)':'var(--bad)';
+  $('#lastResp').innerHTML=`<div class="kpi">
+    <div><span class="pill" style="background:${color}22;color:${color};border:1px solid ${color}66">${r.route}</span>
+    ${r.provider?`<span class="tag">provider <b>${r.provider}</b></span>`:''}
+    <span class="tag">latency <b>${r.latency_ms}ms</b></span><span class="tag">cost <b>$${r.estimated_cost}</b></span></div>
+    <div class="mono" style="margin-top:8px;font-size:13px">${r.text}</div>
+    ${r.error?`<div class="flag on" style="margin-top:8px">error: ${r.error}</div>`:''}</div>`;
+  renderState(d.state);
+}
+async function burst(n){for(let i=0;i<n;i++)await send()}
+
+refresh();
+</script>
+</body>
+</html>
